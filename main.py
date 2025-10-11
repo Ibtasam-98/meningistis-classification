@@ -15,7 +15,7 @@ from tensorflow.keras import layers
 import time
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from matplotlib import rcParams
 # Set style for better plots
 plt.style.use('default')
 
@@ -516,242 +516,141 @@ print(f"⚡ Fastest Model: {fastest_model['model_name']} ({fastest_model['speed'
 # ==============================================================================
 # VISUALIZATION 1: Model Performance with Elegant Blue Gradient
 # ==============================================================================
+rcParams['font.family'] = 'Times New Roman'
+rcParams['font.size'] = 11
+rcParams['axes.linewidth'] = 1.0
+rcParams['figure.dpi'] = 600
+rcParams['savefig.dpi'] = 600
+rcParams['axes.labelweight'] = 'bold'
+
 print("\n" + "=" * 80)
-print("GENERATING VISUALIZATION 1: MODEL PERFORMANCE (ELEGANT BLUE GRADIENT)")
+print("GENERATING HD VISUALIZATION 1: MODEL PERFORMANCE (BLUE GRADIENT)")
 print("=" * 80)
 
-# Prepare data for the plot
+# --- Data Preparation ---
 model_labels = ["DNN", "ANN", "MLP", "SGD", "XGB", "ADA", "SVM", "RF"]
 test_accuracies = [result['test_accuracy'] * 100 for result in results]
 training_times = [result['training_time'] for result in results]
 x_pos = np.arange(len(model_labels))
 
-# Create a figure and the first axis
-fig, ax1 = plt.subplots(figsize=(14, 8))
+# --- Create Figure ---
+fig, ax1 = plt.subplots(figsize=(6.5, 4.2))  # Ideal academic aspect ratio
 
-# Elegant blue gradient (dark → light)
+# Elegant blue gradient
 mixed_colors = ['#0A1D37', '#143875', '#1E5BAF', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE']
 
-# --- BAR PLOT (Test Accuracy) ---
+# --- Bar Plot (Accuracy) ---
 bars = ax1.bar(
-    x_pos,
-    test_accuracies,
-    color=mixed_colors,
-    alpha=0.9,
-    label='Test Accuracy',
-    edgecolor='none',
-    linewidth=1.2
+    x_pos, test_accuracies, color=mixed_colors, alpha=0.9,
+    edgecolor='none', linewidth=0.7, label='Test Accuracy'
 )
+ax1.set_ylabel('Test Accuracy (%)', fontsize=11, fontweight='bold')
+ax1.set_ylim(max(85, min(test_accuracies)*0.95), 100)
 
-# Y-axis (Accuracy)
-ax1.set_ylabel('Test Accuracy (%)', fontsize=12.5, fontweight='bold')
-ax1.tick_params(axis='y', labelsize=10)
-ax1.set_ylim(max(85, min(test_accuracies) * 0.95), 100)
-
-# Value labels on bars
+# Add value labels
 for i, bar in enumerate(bars):
     height = bar.get_height()
-    ax1.text(
-        bar.get_x() + bar.get_width() / 2.,
-        height + 0.8,
-        f'{test_accuracies[i]:.1f}%',
-        ha='center',
-        va='bottom',
-        fontsize=9.5,
-        fontweight='semibold',
-        color='#1E1E1E'
-    )
+    ax1.text(bar.get_x() + bar.get_width()/2, height + 0.6,
+             f'{test_accuracies[i]:.1f}%', ha='center', va='bottom',
+             fontsize=8.5, color='black', fontweight='semibold')
 
-# --- LINE PLOT (Training Time) ---
+# --- Line Plot (Training Time) ---
 ax2 = ax1.twinx()
-line_color = '#1B263B'  # Deep navy for visual balance
 line = ax2.plot(
-    x_pos,
-    training_times,
-    color=line_color,
-    marker='s',
-    linestyle='-',
-    linewidth=2.5,
-    markersize=7,
-    label='Training Time'
+    x_pos, training_times, color='#1B263B', marker='s',
+    linestyle='-', linewidth=1.8, markersize=5, label='Training Time'
 )
+ax2.set_ylabel('Training Time (s)', fontsize=11, fontweight='bold')
+ax2.set_ylim(0, max(training_times)*1.4)
 
-ax2.set_ylabel('Training Time (seconds)', fontsize=12.5, fontweight='bold')
-ax2.tick_params(axis='y', labelsize=10)
-ax2.set_ylim(0, max(training_times) * 1.5 + 0.5)
+# Annotate times
+for i, t in enumerate(training_times):
+    ax2.annotate(f'{t:.2f}s', (x_pos[i], t), textcoords='offset points',
+                 xytext=(0, 8), ha='center', fontsize=8, fontweight='bold',
+                 color='black', bbox=dict(boxstyle="round,pad=0.2", fc='white', ec='none', alpha=0.9))
 
-# Annotate training times
-for i, time_val in enumerate(training_times):
-    y_offset = 10 if time_val > (max(training_times) * 0.1) else -15
-    ax2.annotate(
-        f'{time_val:.2f}s',
-        (x_pos[i], time_val),
-        xytext=(0, y_offset),
-        textcoords='offset points',
-        ha='center',
-        va='bottom',
-        fontsize=9,
-        fontweight='bold',
-        bbox=dict(
-            boxstyle="round,pad=0.2",
-            facecolor='white',
-            alpha=0.9,
-            edgecolor='none'
-        ),
-        color='#1E1E1E'
-    )
-
-# --- Customization ---
-ax1.set_xlabel('Model', fontsize=12.5, fontweight='bold')
+# --- Axes Formatting ---
+ax1.set_xlabel('Models', fontsize=11, fontweight='bold')
 ax1.set_xticks(x_pos)
-ax1.set_xticklabels(model_labels, fontsize=11, fontweight='medium')
+ax1.set_xticklabels(model_labels, fontsize=10)
+ax1.grid(True, linestyle='--', alpha=0.25)
+ax1.spines['top'].set_visible(False)
 
-plt.title(
-    'Model Performance: Test Accuracy vs Training Time\n(Comparison Across Eight Algorithms)',
-    fontsize=14.5,
-    fontweight='bold',
-    pad=20
-)
-
-# --- Styling ---
-fig.patch.set_facecolor('white')
-ax1.set_facecolor('white')
-ax2.set_facecolor('white')
-
-ax1.grid(True, linestyle='--', alpha=0.25, color='gray')
-
-# Spine styling for clean academic look
-for spine in ['bottom', 'top', 'left']:
-    ax1.spines[spine].set_color('black')
-ax2.spines['right'].set_color('black')
-
-# Combine legends
+# Legend
 lines_and_bars = [bars[0]] + line
 labels = ['Test Accuracy', 'Training Time']
-ax1.legend(
-    lines_and_bars,
-    labels,
-    loc='upper left',
-    frameon=True,
-    framealpha=0.95,
-    facecolor='white',
-    edgecolor='lightgray',
-    labelcolor='black',
-    fontsize=9
-)
+ax1.legend(lines_and_bars, labels, loc='upper left', fontsize=9, frameon=True)
 
-# Final layout & export
+# Title
+plt.title('Model Performance: Accuracy vs Training Time', fontsize=12, fontweight='bold', pad=12)
+
+# --- Save in HD Formats ---
 plt.tight_layout()
-plt.savefig(
-    'model_performance_visual_8_models_blue_gradient.png',
-    dpi=600,
-    bbox_inches='tight',
-    facecolor='white',
-    edgecolor='none'
-)
+plt.savefig('HD_Model_Performance.pdf', bbox_inches='tight')  # Vector
+plt.savefig('HD_Model_Performance.png', bbox_inches='tight', dpi=600)
 plt.show()
 
+
 # ==============================================================================
-# VISUALIZATION 2: Consolidated Performance Metrics with Elegant Blue Gradient
+# HD PUBLICATION VISUALIZATION 2: Consolidated Performance Metrics
 # ==============================================================================
+
 print("\n" + "=" * 80)
-print("GENERATING VISUALIZATION 2: CONSOLIDATED PERFORMANCE METRICS (BLUE GRADIENT)")
+print("GENERATING HD VISUALIZATION 2: CONSOLIDATED METRICS")
 print("=" * 80)
 
-# Prepare data for consolidated visualization
 metrics = ['Accuracy', 'Sensitivity', 'Specificity', 'Precision', 'Speed']
 metric_values = {
-    'Accuracy': [result['test_accuracy'] * 100 for result in results],
-    'Sensitivity': [result['sensitivity'] * 100 for result in results],
-    'Specificity': [result['specificity'] * 100 for result in results],
-    'Precision': [result['precision'] * 100 for result in results],
-    'Speed': [result['speed'] for result in results]
+    'Accuracy': [r['test_accuracy'] * 100 for r in results],
+    'Sensitivity': [r['sensitivity'] * 100 for r in results],
+    'Specificity': [r['specificity'] * 100 for r in results],
+    'Precision': [r['precision'] * 100 for r in results],
+    'Speed': [r['speed'] for r in results]
 }
 
-# Normalize speed to 0–100 scale for consistent comparison
+# Normalize speed to 0–100
 max_speed = max(metric_values['Speed'])
-metric_values['Speed'] = [speed / max_speed * 100 for speed in metric_values['Speed']]
+metric_values['Speed'] = [s / max_speed * 100 for s in metric_values['Speed']]
 
-# Create consolidated visualization
-fig, ax = plt.subplots(figsize=(18, 9))
-
-# Set the width of bars and positions
+# --- Create Figure ---
+fig, ax = plt.subplots(figsize=(7, 4.5))
 bar_width = 0.15
 x_pos = np.arange(len(model_labels))
-
-# Elegant professional blue gradient (dark → light)
 metric_colors = ['#0A1D37', '#143875', '#1E5BAF', '#3B82F6', '#93C5FD']
 
-# Plot bars for each metric
+# --- Bars for Each Metric ---
 for i, metric in enumerate(metrics):
     values = metric_values[metric]
     positions = x_pos + i * bar_width
     bars = ax.bar(
-        positions,
-        values,
-        bar_width,
-        label=metric,
-        color=metric_colors[i],
-        alpha=0.9,
-        edgecolor='none',
-        linewidth=0.8
+        positions, values, bar_width, label=metric,
+        color=metric_colors[i], alpha=0.9, linewidth=0.5
     )
+    # for bar, value in zip(bars, values):
+        # ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.8,
+        #         f'{value:.1f}%', ha='center', va='bottom', fontsize=8, color='black')
 
-    # Add value labels on bars
-    for bar, value in zip(bars, values):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + 1,
-            f'{value:.1f}{"%" if metric != "Speed" else ""}',
-            ha='center',
-            va='bottom',
-            fontsize=8.5,
-            fontweight='semibold',
-            color='#1E1E1E'
-        )
-
-# Customize the plot for publication
-ax.set_xlabel('Models', fontsize=13, fontweight='bold')
-ax.set_ylabel('Performance Score (%)', fontsize=13, fontweight='bold')
-ax.set_title(
-    'Consolidated Model Performance Metrics (Accuracy, Sensitivity, Specificity, Precision, Speed)',
-    fontsize=15,
-    fontweight='bold',
-    pad=20
-)
-ax.set_xticks(x_pos + bar_width * 2)
-ax.set_xticklabels(model_labels, fontsize=11, fontweight='medium')
+# --- Format Axes ---
+ax.set_xlabel('Models', fontsize=11, fontweight='bold')
+ax.set_ylabel('Performance Score (%)', fontsize=11, fontweight='bold')
+ax.set_xticks(x_pos + bar_width*2)
+ax.set_xticklabels(model_labels, fontsize=10)
 ax.set_ylim(0, 105)
+ax.grid(True, linestyle='--', alpha=0.25)
 
-# Refined legend style
-ax.legend(
-    title='Metrics',
-    title_fontsize=10,
-    fontsize=9,
-    frameon=True,
-    framealpha=0.95,
-    facecolor='white',
-    edgecolor='lightgray',
-    loc='upper right'
-)
+# Legend
+ax.legend(title='Metrics', title_fontsize=9, fontsize=8.5, loc='upper right', frameon=True)
 
-# Subtle gridlines for clarity
-ax.grid(True, linestyle='--', alpha=0.25, axis='y')
+plt.title('Consolidated Model Performance Metrics', fontsize=12, fontweight='bold', pad=12)
 
-# Clean white background for journal clarity
-fig.patch.set_facecolor('white')
-ax.set_facecolor('white')
-
-# Tight layout for publication formatting
+# --- Save in HD Formats ---
 plt.tight_layout()
-plt.savefig(
-    'consolidated_performance_metrics_8_models_blue_gradient.png',
-    dpi=600,
-    bbox_inches='tight',
-    facecolor='white',
-    edgecolor='none'
-)
+plt.savefig('HD_Consolidated_Metrics.pdf', bbox_inches='tight')
+plt.savefig('HD_Consolidated_Metrics.png', bbox_inches='tight', dpi=600)
 plt.show()
+
+
+
 
 # ==============================================================================
 # USER INPUT CLASSIFICATION SYSTEM WITH VALIDATION
