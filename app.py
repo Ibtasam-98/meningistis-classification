@@ -400,7 +400,7 @@ class MeningitisClassifier:
 
         self.best_model = max(self.results, key=lambda x: x['test_accuracy'])
         self.models_trained = True
-        status_text.text("🎉 All models trained successfully!")
+        status_text.text(" All models trained successfully!")
 
     def validate_clinical_ranges(self, age, wbc_count, protein_level, glucose_level,
                                  hemoglobin, wbc_blood_count, platelets, crp_level):
