@@ -7,6 +7,7 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
 from xgboost import XGBClassifier
 import tensorflow as tf
 from tensorflow import keras
@@ -63,7 +64,7 @@ X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
 
-def evaluate_model(model, model_name, X_train, X_test, y_train, y_test, is_dnn=False):
+def evaluate_model(model, model_name, X_train, X_test, y_train, y_test, is_dnn=False, is_sklearn_nn=False):
     print("\n" + "=" * 60)
     print(f"{model_name.upper()} - TRAINING PHASE")
     print("=" * 60)
@@ -109,6 +110,35 @@ def evaluate_model(model, model_name, X_train, X_test, y_train, y_test, is_dnn=F
         test_recall = recall_score(y_test, y_pred, zero_division=0)
 
         history_data = history.history
+
+    elif is_sklearn_nn:
+        # Scikit-learn neural network training
+        model.fit(X_train, y_train)
+        training_time = time.time() - start_time
+        print(f"Training completed in {training_time:.2f} seconds")
+
+        # Testing phase
+        print("\n" + "=" * 60)
+        print(f"{model_name.upper()} - TESTING PHASE")
+        print("=" * 60)
+        start_test_time = time.time()
+
+        y_pred = model.predict(X_test)
+        y_pred_proba = model.predict_proba(X_test)[:, 1]
+        testing_time = time.time() - start_test_time
+
+        # Calculate metrics
+        test_accuracy = accuracy_score(y_test, y_pred)
+        train_accuracy = accuracy_score(y_train, model.predict(X_train))
+        val_accuracy = train_accuracy
+        best_val_accuracy = val_accuracy
+        best_train_accuracy = train_accuracy
+
+        # Calculate precision and recall
+        test_precision = precision_score(y_test, y_pred, zero_division=0)
+        test_recall = recall_score(y_test, y_pred, zero_division=0)
+
+        history_data = None
 
     else:
         # Traditional ML models
@@ -337,6 +367,40 @@ dnn_model.compile(
 print("\nDNN MODEL ARCHITECTURE")
 dnn_model.summary()
 
+# ANN Model (Simple Neural Network)
+ann_model = keras.Sequential([
+    layers.Dense(64, activation='relu', input_shape=(X_train_scaled.shape[1],)),
+    layers.Dropout(0.3),
+    layers.Dense(32, activation='relu'),
+    layers.Dropout(0.2),
+    layers.Dense(1, activation='sigmoid')
+])
+
+ann_model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=0.001),
+    loss='binary_crossentropy',
+    metrics=['accuracy']
+)
+
+print("\nANN MODEL ARCHITECTURE")
+ann_model.summary()
+
+# MLP Classifier (Scikit-learn)
+mlp_model = MLPClassifier(
+    hidden_layer_sizes=(100, 50),
+    activation='relu',
+    solver='adam',
+    alpha=0.001,
+    batch_size=32,
+    learning_rate='adaptive',
+    learning_rate_init=0.001,
+    max_iter=500,
+    random_state=42,
+    early_stopping=True,
+    validation_fraction=0.2,
+    n_iter_no_change=20
+)
+
 # SGD Classifier
 sgd_model = SGDClassifier(
     loss='log_loss',
@@ -385,6 +449,16 @@ dnn_result = evaluate_model(dnn_model, "DEEP NEURAL NETWORK", X_train_scaled, X_
                             is_dnn=True)
 results.append(dnn_result)
 
+# ANN
+ann_result = evaluate_model(ann_model, "ARTIFICIAL NEURAL NETWORK", X_train_scaled, X_test_scaled, y_train, y_test,
+                            is_dnn=True)
+results.append(ann_result)
+
+# MLP
+mlp_result = evaluate_model(mlp_model, "MLP CLASSIFIER", X_train_scaled, X_test_scaled, y_train, y_test,
+                            is_sklearn_nn=True)
+results.append(mlp_result)
+
 # SGD Classifier
 sgd_result = evaluate_model(sgd_model, "SGD CLASSIFIER", X_train_scaled, X_test_scaled, y_train, y_test, is_dnn=False)
 results.append(sgd_result)
@@ -412,12 +486,12 @@ print("\n" + "=" * 80)
 print("FINAL MODEL COMPARISON")
 print("=" * 80)
 
-print("\n{:<20} {:<12} {:<12} {:<12} {:<12} {:<12} {:<12}".format(
+print("\n{:<25} {:<12} {:<12} {:<12} {:<12} {:<12} {:<12}".format(
     "MODEL", "ACCURACY", "SENSITIVITY", "SPECIFICITY", "PRECISION", "SPEED", "ROC AUC"
 ))
-print("-" * 100)
+print("-" * 110)
 for result in results:
-    print("{:<20} {:<12.4f} {:<12.4f} {:<12.4f} {:<12.4f} {:<12.2f} {:<12.4f}".format(
+    print("{:<25} {:<12.4f} {:<12.4f} {:<12.4f} {:<12.4f} {:<12.2f} {:<12.4f}".format(
         result['model_name'],
         result['test_accuracy'],
         result['sensitivity'],
@@ -447,16 +521,16 @@ print("GENERATING VISUALIZATION 1: MODEL PERFORMANCE (ELEGANT BLUE GRADIENT)")
 print("=" * 80)
 
 # Prepare data for the plot
-model_labels = ["DNN", "SGD", "XGB", "ADA", "SVM", "RF"]
+model_labels = ["DNN", "ANN", "MLP", "SGD", "XGB", "ADA", "SVM", "RF"]
 test_accuracies = [result['test_accuracy'] * 100 for result in results]
 training_times = [result['training_time'] for result in results]
 x_pos = np.arange(len(model_labels))
 
 # Create a figure and the first axis
-fig, ax1 = plt.subplots(figsize=(12, 7))
+fig, ax1 = plt.subplots(figsize=(14, 8))
 
 # Elegant blue gradient (dark → light)
-mixed_colors = ['#0A1D37', '#143875', '#1E5BAF', '#3B82F6', '#60A5FA', '#93C5FD']
+mixed_colors = ['#0A1D37', '#143875', '#1E5BAF', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE']
 
 # --- BAR PLOT (Test Accuracy) ---
 bars = ax1.bar(
@@ -533,7 +607,7 @@ ax1.set_xticks(x_pos)
 ax1.set_xticklabels(model_labels, fontsize=11, fontweight='medium')
 
 plt.title(
-    'Model Performance: Test Accuracy vs Training Time\n(Comparison Across Six Algorithms)',
+    'Model Performance: Test Accuracy vs Training Time\n(Comparison Across Eight Algorithms)',
     fontsize=14.5,
     fontweight='bold',
     pad=20
@@ -569,15 +643,13 @@ ax1.legend(
 # Final layout & export
 plt.tight_layout()
 plt.savefig(
-    'model_performance_visual_6_models_blue_gradient.png',
+    'model_performance_visual_8_models_blue_gradient.png',
     dpi=600,
     bbox_inches='tight',
     facecolor='white',
     edgecolor='none'
 )
 plt.show()
-
-
 
 # ==============================================================================
 # VISUALIZATION 2: Consolidated Performance Metrics with Elegant Blue Gradient
@@ -601,7 +673,7 @@ max_speed = max(metric_values['Speed'])
 metric_values['Speed'] = [speed / max_speed * 100 for speed in metric_values['Speed']]
 
 # Create consolidated visualization
-fig, ax = plt.subplots(figsize=(16, 8))
+fig, ax = plt.subplots(figsize=(18, 9))
 
 # Set the width of bars and positions
 bar_width = 0.15
@@ -673,15 +745,13 @@ ax.set_facecolor('white')
 # Tight layout for publication formatting
 plt.tight_layout()
 plt.savefig(
-    'consolidated_performance_metrics_blue_gradient.png',
+    'consolidated_performance_metrics_8_models_blue_gradient.png',
     dpi=600,
     bbox_inches='tight',
     facecolor='white',
     edgecolor='none'
 )
 plt.show()
-
-
 
 # ==============================================================================
 # USER INPUT CLASSIFICATION SYSTEM WITH VALIDATION
@@ -777,7 +847,7 @@ def get_valid_input(prompt, input_type=float, min_val=None, max_val=None):
             print(f"❌ Error: {e}")
 
 
-def classify_new_patient(best_model, model_name, is_dnn=False):
+def classify_new_patient(best_model, model_name, is_dnn=False, is_sklearn_nn=False):
     """
     Function to take user input and classify meningitis type with validation
     """
@@ -831,6 +901,9 @@ def classify_new_patient(best_model, model_name, is_dnn=False):
         if is_dnn:
             prediction_proba = best_model.predict(patient_data_scaled, verbose=0)[0][0]
             prediction = 1 if prediction_proba > 0.5 else 0
+        elif is_sklearn_nn:
+            prediction_proba = best_model.predict_proba(patient_data_scaled)[0][1]
+            prediction = best_model.predict(patient_data_scaled)[0]
         else:
             prediction_proba = best_model.predict_proba(patient_data_scaled)[0][1]
             prediction = best_model.predict(patient_data_scaled)[0]
@@ -987,29 +1060,30 @@ def main_user_interface():
                             print("❌ Invalid model selection")
                             continue
 
-                    # Map model names to actual model objects
+                    # Map model names to actual model objects and their types
                     model_mapping = {
-                        "DEEP NEURAL NETWORK": dnn_model,
-                        "SGD CLASSIFIER": sgd_model,
-                        "XGBOOST CLASSIFIER": xgb_model,
-                        "ADABOOST CLASSIFIER": adaboost_model,
-                        "SVM RBF": svm_rbf_model,
-                        "RANDOM FOREST": rf_model
+                        "DEEP NEURAL NETWORK": (dnn_model, True, False),
+                        "ARTIFICIAL NEURAL NETWORK": (ann_model, True, False),
+                        "MLP CLASSIFIER": (mlp_model, False, True),
+                        "SGD CLASSIFIER": (sgd_model, False, False),
+                        "XGBOOST CLASSIFIER": (xgb_model, False, False),
+                        "ADABOOST CLASSIFIER": (adaboost_model, False, False),
+                        "SVM RBF": (svm_rbf_model, False, False),
+                        "RANDOM FOREST": (rf_model, False, False)
                     }
 
-                    selected_model = model_mapping.get(model_name)
-                    is_dnn = model_name == "DEEP NEURAL NETWORK"
-
-                    if selected_model is not None:
+                    selected_model_info = model_mapping.get(model_name)
+                    if selected_model_info:
+                        selected_model, is_dnn, is_sklearn_nn = selected_model_info
                         # Perform classification
-                        diagnosis, confidence = classify_new_patient(selected_model, model_name, is_dnn)
+                        diagnosis, confidence = classify_new_patient(selected_model, model_name, is_dnn, is_sklearn_nn)
 
                         if diagnosis is not None:
                             # Option to try another patient
                             while True:
                                 another = input("\nWould you like to classify another patient? (y/n): ").lower()
                                 if another == 'y':
-                                    diagnosis, confidence = classify_new_patient(selected_model, model_name, is_dnn)
+                                    diagnosis, confidence = classify_new_patient(selected_model, model_name, is_dnn, is_sklearn_nn)
                                     if diagnosis is None:
                                         break
                                 elif another == 'n':
@@ -1028,13 +1102,13 @@ def main_user_interface():
                 print("\n" + "=" * 60)
                 print("MODEL PERFORMANCE SUMMARY")
                 print("=" * 60)
-                print("\n{:<20} {:<10} {:<12} {:<12}".format(
+                print("\n{:<25} {:<10} {:<12} {:<12}".format(
                     "MODEL", "ACCURACY", "SENSITIVITY", "SPECIFICITY"
                 ))
-                print("-" * 60)
+                print("-" * 65)
                 for result in results:
-                    print("{:<20} {:<10.1f}% {:<12.1f}% {:<12.1f}%".format(
-                        result['model_name'][:18],
+                    print("{:<25} {:<10.1f}% {:<12.1f}% {:<12.1f}%".format(
+                        result['model_name'][:23],
                         result['test_accuracy'] * 100,
                         result['sensitivity'] * 100,
                         result['specificity'] * 100

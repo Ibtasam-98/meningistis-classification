@@ -7,6 +7,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_c
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
 from xgboost import XGBClassifier
 import tensorflow as tf
 from tensorflow import keras
@@ -21,7 +22,7 @@ from plotly.subplots import make_subplots
 # Set page configuration
 st.set_page_config(
     page_title="NeuroScan AI - Meningitis Diagnosis",
-    page_icon="🧠",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -168,7 +169,7 @@ class MeningitisClassifier:
             df_classification.loc[bacterial_mask, 'CRP_Level'] *= 3
 
             if df_classification.empty or len(df_classification) < 2:
-                st.error("❌ Error: Insufficient data after preprocessing.")
+                st.error("Error: Insufficient data after preprocessing.")
                 return None, None
 
             X = df_classification[self.feature_columns]
@@ -191,7 +192,7 @@ class MeningitisClassifier:
             return (X_train_scaled, X_test_scaled, y_train, y_test), df_classification
 
         except Exception as e:
-            st.error(f"❌ Error loading data: {e}")
+            st.error(f"Error loading data: {e}")
             return None, None
 
     def create_dnn_model(self, input_shape):
@@ -220,8 +221,47 @@ class MeningitisClassifier:
 
         return model
 
+    def create_ann_model(self, input_shape):
+        """Create Artificial Neural Network model"""
+        model = keras.Sequential([
+            layers.Dense(64, activation='relu', input_shape=(input_shape,)),
+            layers.Dropout(0.3),
+            layers.Dense(32, activation='relu'),
+            layers.Dropout(0.2),
+            layers.Dense(1, activation='sigmoid')
+        ])
+
+        model.compile(
+            optimizer=keras.optimizers.Adam(learning_rate=0.001),
+            loss='binary_crossentropy',
+            metrics=['accuracy']
+        )
+
+        return model
+
     def initialize_models(self):
         """Initialize all machine learning models"""
+        # Neural Network Models
+        self.models['DNN'] = None  # Will be created during training
+        self.models['ANN'] = None  # Will be created during training
+
+        # MLP Classifier (Scikit-learn)
+        self.models['MLP'] = MLPClassifier(
+            hidden_layer_sizes=(100, 50),
+            activation='relu',
+            solver='adam',
+            alpha=0.001,
+            batch_size=32,
+            learning_rate='adaptive',
+            learning_rate_init=0.001,
+            max_iter=500,
+            random_state=42,
+            early_stopping=True,
+            validation_fraction=0.2,
+            n_iter_no_change=20
+        )
+
+        # Traditional ML Models
         self.models['SGD'] = SGDClassifier(
             loss='log_loss',
             penalty='l2',
@@ -265,19 +305,24 @@ class MeningitisClassifier:
             restore_best_weights=True
         )
 
-        # Create DNN model
+        # Create DNN and ANN models
         dnn_model = self.create_dnn_model(X_train.shape[1])
+        ann_model = self.create_ann_model(X_train.shape[1])
+
         self.models['DNN'] = dnn_model
+        self.models['ANN'] = ann_model
 
         progress_bar = st.progress(0)
         status_text = st.empty()
+        results_container = st.empty()
 
         for i, (name, model) in enumerate(self.models.items()):
-            status_text.text(f"🔄 Training {name}...")
+            status_text.text(f"Training {name}...")
 
             start_time = time.time()
 
-            if name == 'DNN':
+            if name in ['DNN', 'ANN']:
+                # Keras models training
                 history = model.fit(
                     X_train, y_train,
                     epochs=50,
@@ -296,6 +341,7 @@ class MeningitisClassifier:
                 val_accuracy = history.history['val_accuracy'][-1]
 
             else:
+                # Scikit-learn models training
                 model.fit(X_train, y_train)
                 training_time = time.time() - start_time
 
@@ -341,6 +387,17 @@ class MeningitisClassifier:
             self.results.append(result)
             progress_bar.progress((i + 1) / len(self.models))
 
+            # Update results in real-time
+            with results_container.container():
+                st.success(f"{name} trained successfully!")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Accuracy", f"{test_accuracy * 100:.2f}%")
+                with col2:
+                    st.metric("ROC AUC", f"{roc_auc * 100:.2f}%")
+                with col3:
+                    st.metric("Training Time", f"{training_time:.2f}s")
+
         self.best_model = max(self.results, key=lambda x: x['test_accuracy'])
         self.models_trained = True
         status_text.text("🎉 All models trained successfully!")
@@ -351,46 +408,46 @@ class MeningitisClassifier:
         warnings = []
 
         if age < 0 or age > 120:
-            warnings.append("❌ Age outside typical range (0-120 years)")
+            warnings.append("Age outside typical range (0-120 years)")
         elif age < 1:
             warnings.append("⚠ Infant patient - special considerations needed")
 
         if wbc_count < 0:
-            warnings.append("❌ CSF WBC count cannot be negative")
+            warnings.append("CSF WBC count cannot be negative")
         elif wbc_count > 10000:
             warnings.append("⚠ Very high CSF WBC count - check measurement")
 
         if protein_level < 0:
-            warnings.append("❌ CSF Protein level cannot be negative")
+            warnings.append("CSF Protein level cannot be negative")
         elif protein_level > 500:
             warnings.append("⚠ Very high CSF Protein level - check measurement")
 
         if glucose_level < 0:
-            warnings.append("❌ CSF Glucose level cannot be negative")
+            warnings.append("CSF Glucose level cannot be negative")
         elif glucose_level > 200:
             warnings.append("⚠ High CSF Glucose level - unusual for meningitis")
 
         if hemoglobin < 0:
-            warnings.append("❌ Hemoglobin cannot be negative")
+            warnings.append("Hemoglobin cannot be negative")
         elif hemoglobin > 20:
             warnings.append("⚠ High Hemoglobin level - check measurement")
         elif hemoglobin < 7:
             warnings.append("⚠ Low Hemoglobin - possible anemia")
 
         if wbc_blood_count < 0:
-            warnings.append("❌ Blood WBC count cannot be negative")
+            warnings.append("Blood WBC count cannot be negative")
         elif wbc_blood_count > 50000:
             warnings.append("⚠ Very high Blood WBC count - check measurement")
 
         if platelets < 0:
-            warnings.append("❌ Platelet count cannot be negative")
+            warnings.append("Platelet count cannot be negative")
         elif platelets > 1000:
             warnings.append("⚠ High Platelet count - check measurement")
         elif platelets < 50:
             warnings.append("⚠ Low Platelet count - risk of bleeding")
 
         if crp_level < 0:
-            warnings.append("❌ CRP level cannot be negative")
+            warnings.append("CRP level cannot be negative")
         elif crp_level > 500:
             warnings.append("⚠ Very high CRP level - severe inflammation")
 
@@ -401,13 +458,14 @@ class MeningitisClassifier:
         try:
             model_result = next((r for r in self.results if r['model_name'] == model_name), None)
             if not model_result:
-                st.error(f"❌ Model {model_name} not found")
+                st.error(f"Model {model_name} not found")
                 return None, None
 
             model = model_result['model']
             patient_data_scaled = self.scaler.transform([patient_data])
 
-            if model_name == 'DNN':
+            # Make prediction
+            if model_name in ['DNN', 'ANN']:
                 prediction_proba = model.predict(patient_data_scaled, verbose=0)[0][0]
                 prediction = 1 if prediction_proba > 0.5 else 0
             else:
@@ -420,12 +478,13 @@ class MeningitisClassifier:
             return diagnosis, confidence
 
         except Exception as e:
-            st.error(f"❌ Error in classification: {e}")
+            st.error(f"Error in classification: {e}")
             return None, None
 
 
 def create_performance_plots(classifier):
     """Create interactive performance visualization plots"""
+    # Create subplots
     fig = make_subplots(
         rows=2, cols=2,
         subplot_titles=('Model Accuracy', 'ROC AUC Scores',
@@ -441,26 +500,34 @@ def create_performance_plots(classifier):
     sensitivities = [r['sensitivity'] * 100 for r in classifier.results]
     specificities = [r['specificity'] * 100 for r in classifier.results]
 
-    colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c']
+    # Color scheme for 8 models
+    colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#d35400']
 
+    # Accuracy plot
     fig.add_trace(
         go.Bar(name='Test Accuracy', x=model_names, y=test_accuracies,
-               marker_color=colors, text=test_accuracies, texttemplate='%{text:.1f}%'),
+               marker_color=colors, text=test_accuracies, texttemplate='%{text:.1f}%',
+               textposition='auto'),
         row=1, col=1
     )
 
+    # ROC AUC plot
     fig.add_trace(
         go.Bar(name='ROC AUC', x=model_names, y=roc_aucs,
-               marker_color=colors, text=roc_aucs, texttemplate='%{text:.1f}%'),
+               marker_color=colors, text=roc_aucs, texttemplate='%{text:.1f}%',
+               textposition='auto'),
         row=1, col=2
     )
 
+    # Training time plot
     fig.add_trace(
         go.Bar(name='Training Time (s)', x=model_names, y=training_times,
-               marker_color=colors, text=training_times, texttemplate='%{text:.2f}s'),
+               marker_color=colors, text=training_times, texttemplate='%{text:.2f}s',
+               textposition='auto'),
         row=2, col=1
     )
 
+    # Clinical metrics plot
     fig.add_trace(
         go.Bar(name='Sensitivity', x=model_names, y=sensitivities,
                marker_color='#27ae60', text=sensitivities, texttemplate='%{text:.1f}%'),
@@ -473,7 +540,7 @@ def create_performance_plots(classifier):
     )
 
     fig.update_layout(
-        height=600,
+        height=800,
         showlegend=True,
         title_text="Model Performance Dashboard",
         template="plotly_white",
@@ -508,7 +575,7 @@ def main():
         st.session_state.data_loaded = False
 
     # Header
-    st.markdown('<h1 class="main-header">🧠 NeuroScan AI</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">NeuroScan AI</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; color: #666; margin-bottom: 2rem;">Meningitis Classification System</p>',
                 unsafe_allow_html=True)
 
@@ -578,6 +645,19 @@ def main():
 
             metrics_df = pd.DataFrame(metrics_data)
             st.dataframe(metrics_df, use_container_width=True)
+
+            # Display best model info
+            best_model = st.session_state.classifier.best_model
+            st.subheader("🏆 Best Performing Model")
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Model", best_model['model_name'])
+            with col2:
+                st.metric("Accuracy", f"{best_model['test_accuracy'] * 100:.2f}%")
+            with col3:
+                st.metric("ROC AUC", f"{best_model['roc_auc'] * 100:.2f}%")
+            with col4:
+                st.metric("Training Time", f"{best_model['training_time']:.2f}s")
 
             st.subheader("Performance Analytics")
             fig_performance = create_performance_plots(st.session_state.classifier)
@@ -668,18 +748,27 @@ def main():
                         st.subheader("Clinical Recommendations")
                         if diagnosis == "BACTERIAL":
                             st.markdown("""
+                            **Immediate Actions Required:**
                             - Empiric antibiotics within 1 hour
                             - Blood cultures before antibiotics
                             - ICU admission preparation
                             - Ceftriaxone 2g IV + Vancomycin
+                            - Dexamethasone if indicated
+                            - Close neurological monitoring
                             """)
                         else:
                             st.markdown("""
+                            **Supportive Management:**
                             - Supportive care and observation
                             - Outpatient management if stable
                             - Pain and fever management
                             - Adequate hydration
+                            - Follow-up in 24-48 hours
+                            - Consider viral PCR testing
                             """)
+
+                        # Show model used
+                        st.info(f"**Model Used:** {selected_model} | **Confidence:** {confidence * 100:.2f}%")
 
     # Footer
     st.markdown("---")
