@@ -1,6 +1,6 @@
-# 🧠 NeuroScan AI - Meningitis Classification System
+# NeuroScan AI - Meningitis Classification System
 
-## 📋 Overview
+## Overview
 
 **NeuroScan AI** is an advanced machine learning system designed to assist in the diagnosis and classification of meningitis types (Bacterial vs Viral) using clinical parameters. This comprehensive tool leverages multiple AI models to provide accurate, rapid diagnostic support for healthcare professionals.
 
