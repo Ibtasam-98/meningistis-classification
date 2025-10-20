@@ -1055,7 +1055,6 @@ def main_user_interface():
             print(f"❌ Error: {e}")
 
 
-# Run the main user interface
 if __name__ == "__main__":
     main_user_interface()
 
