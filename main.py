@@ -653,10 +653,216 @@ plt.show()
 
 
 # ==============================================================================
-# USER INPUT CLASSIFICATION SYSTEM WITH VALIDATION
+# DATASET STATISTICAL ANALYSIS AND VISUALIZATION
 # ==============================================================================
 print("\n" + "=" * 80)
-print("MENINGITIS CLASSIFICATION - USER INPUT WITH VALIDATION")
+print("DATASET STATISTICAL ANALYSIS")
+print("=" * 80)
+
+# Basic dataset information
+print(f"\n📊 DATASET OVERVIEW:")
+print(f"   • Total samples: {len(df_classification)}")
+print(f"   • Features: {len(feature_columns)}")
+print(f"   • Classes: {len(df_classification['Diagnosis'].unique())}")
+print(f"   • Dataset shape: {df_classification.shape}")
+
+# Statistical summary
+print(f"\n📈 STATISTICAL SUMMARY:")
+print(df_classification[feature_columns].describe())
+
+# Class distribution by percentages
+class_percentages = df_classification['Diagnosis'].value_counts(normalize=True) * 100
+print(f"\n🎯 CLASS DISTRIBUTION:")
+for diagnosis, percentage in class_percentages.items():
+    print(f"   • {diagnosis}: {percentage:.2f}%")
+
+# Missing values analysis
+missing_values = df_classification[feature_columns].isnull().sum()
+print(f"\n🔍 MISSING VALUES ANALYSIS:")
+if missing_values.sum() == 0:
+    print("   ✓ No missing values in selected features")
+else:
+    for feature, missing_count in missing_values.items():
+        if missing_count > 0:
+            print(f"   • {feature}: {missing_count} missing values ({(missing_count/len(df_classification))*100:.2f}%)")
+
+# ==============================================================================
+# VISUALIZATION 3: Statistical Analysis Plots
+# ==============================================================================
+
+print("\n" + "=" * 80)
+print("GENERATING STATISTICAL ANALYSIS VISUALIZATIONS")
+print("=" * 80)
+
+# Create a comprehensive statistical analysis figure
+fig = plt.figure(figsize=(20, 16))
+fig.suptitle('MENINGITIS DATASET - COMPREHENSIVE STATISTICAL ANALYSIS',
+             fontsize=16, fontweight='bold', y=0.98)
+
+# Define color scheme for consistency
+clinical_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+                   '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+
+# Subplot 1: Class Distribution Line Chart (Replaced Pie Chart)
+ax1 = plt.subplot(3, 4, 1)
+class_counts = df_classification['Diagnosis'].value_counts()
+total_samples = len(df_classification)
+class_percentages = (class_counts / total_samples) * 100
+
+# Create line chart for class distribution over time (simulated)
+time_points = np.arange(len(class_counts))
+diagnoses = class_counts.index
+counts = class_counts.values
+
+# Plot line with markers
+line = ax1.plot(time_points, counts, marker='o', linestyle='-',
+                linewidth=3, markersize=8, color='#2E86AB', alpha=0.8)
+
+# Add value annotations
+for i, (diagnosis, count, percentage) in enumerate(zip(diagnoses, counts, class_percentages)):
+    ax1.annotate(f'{diagnosis}\n{count} samples\n({percentage:.1f}%)',
+                xy=(i, count), xytext=(i, count + total_samples * 0.02),
+                ha='center', va='bottom', fontsize=10, fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='lightblue', alpha=0.7))
+
+ax1.set_xlabel('Diagnosis Categories', fontweight='bold')
+ax1.set_ylabel('Number of Samples', fontweight='bold')
+ax1.set_title('A) Class Distribution Analysis', fontsize=12, fontweight='bold', pad=20)
+ax1.set_xticks(time_points)
+ax1.set_xticklabels(diagnoses, fontsize=10)
+ax1.grid(True, alpha=0.3)
+ax1.set_ylim(0, max(counts) * 1.15)
+
+# Add summary statistics
+ax1.text(0.02, 0.98, f'Total Samples: {total_samples}\nBacterial: {class_counts["Bacterial"]}\nViral: {class_counts["Viral"]}',
+         transform=ax1.transAxes, verticalalignment='top',
+         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5),
+         fontsize=9, fontweight='bold')
+
+# Subplot 2: Feature Distributions by Diagnosis
+ax2 = plt.subplot(3, 4, 2)
+feature_means_by_class = df_classification.groupby('Diagnosis')[feature_columns].mean()
+x_pos = np.arange(len(feature_columns))
+width = 0.35
+
+bars1 = ax2.bar(x_pos - width/2, feature_means_by_class.loc['Bacterial'],
+                width, label='Bacterial', color='#ff6b6b', alpha=0.8)
+bars2 = ax2.bar(x_pos + width/2, feature_means_by_class.loc['Viral'],
+                width, label='Viral', color='#4ecdc4', alpha=0.8)
+
+ax2.set_xlabel('Features', fontweight='bold')
+ax2.set_ylabel('Mean Values', fontweight='bold')
+ax2.set_title('B) Feature Means by Diagnosis', fontsize=12, fontweight='bold')
+ax2.set_xticks(x_pos)
+ax2.set_xticklabels([f.replace('_', '\n') for f in feature_columns],
+                   rotation=45, ha='right', fontsize=8)
+ax2.legend()
+ax2.grid(True, alpha=0.3)
+
+# Subplot 3: Correlation Heatmap
+ax3 = plt.subplot(3, 4, 3)
+correlation_matrix = df_classification[feature_columns].corr()
+mask = np.triu(np.ones_like(correlation_matrix, dtype=bool))
+sns.heatmap(correlation_matrix, mask=mask, annot=True, cmap='coolwarm',
+            center=0, square=True, fmt='.2f', cbar_kws={'shrink': 0.8},
+            ax=ax3)
+ax3.set_title('C) Feature Correlation Heatmap', fontsize=12, fontweight='bold')
+ax3.set_xticklabels([f.replace('_', '\n') for f in feature_columns],
+                   rotation=45, ha='right', fontsize=8)
+ax3.set_yticklabels([f.replace('_', '\n') for f in feature_columns],
+                   rotation=0, fontsize=8)
+
+# Subplot 4: Feature Distributions (Box plots)
+ax4 = plt.subplot(3, 4, 4)
+# Select first 4 features for box plot clarity
+selected_features = feature_columns[:4]
+df_melted = df_classification.melt(id_vars=['Diagnosis'],
+                                  value_vars=selected_features,
+                                  var_name='Feature',
+                                  value_name='Value')
+sns.boxplot(data=df_melted, x='Feature', y='Value', hue='Diagnosis',
+            palette=['#ff6b6b', '#4ecdc4'], ax=ax4)
+ax4.set_title('D) Feature Distributions by Diagnosis', fontsize=12, fontweight='bold')
+ax4.set_xlabel('Features', fontweight='bold')
+ax4.set_ylabel('Values', fontweight='bold')
+ax4.set_xticklabels([f.replace('_', '\n') for f in selected_features],
+                   rotation=45, ha='right')
+ax4.legend(title='Diagnosis')
+ax4.grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('HD_Statistical_Analysis.pdf', bbox_inches='tight', dpi=600)
+plt.savefig('HD_Statistical_Analysis.png', bbox_inches='tight', dpi=600)
+plt.show()
+
+# ==============================================================================
+# PRINT STATISTICAL SUMMARY
+# ==============================================================================
+
+print("\n" + "=" * 80)
+print("DETAILED STATISTICAL SUMMARY")
+print("=" * 80)
+
+# Print feature-wise statistics by diagnosis
+print(f"\n📊 FEATURE STATISTICS BY DIAGNOSIS:")
+print("-" * 100)
+print(f"{'Feature':<20} {'Diagnosis':<12} {'Mean':<12} {'Std':<12} {'Min':<12} {'Max':<12} {'Count':<10}")
+print("-" * 100)
+
+for feature in feature_columns:
+    for diagnosis in ['Bacterial', 'Viral']:
+        subset = df_classification[df_classification['Diagnosis'] == diagnosis][feature]
+        print(f"{feature:<20} {diagnosis:<12} {subset.mean():<12.2f} {subset.std():<12.2f} "
+              f"{subset.min():<12.2f} {subset.max():<12.2f} {len(subset):<10}")
+
+# Print correlation analysis
+print(f"\n🔗 STRONGEST FEATURE CORRELATIONS (|r| > 0.5):")
+strong_correlations = []
+for i in range(len(correlation_matrix.columns)):
+    for j in range(i+1, len(correlation_matrix.columns)):
+        corr = correlation_matrix.iloc[i, j]
+        if abs(corr) > 0.5:
+            strong_correlations.append((correlation_matrix.columns[i],
+                                      correlation_matrix.columns[j], corr))
+
+if strong_correlations:
+    for feat1, feat2, corr in sorted(strong_correlations, key=lambda x: abs(x[2]), reverse=True):
+        direction = "positive" if corr > 0 else "negative"
+        print(f"   • {feat1} ↔ {feat2}: {corr:.3f} ({direction})")
+else:
+    print("   • No strong correlations found (|r| > 0.5)")
+
+# Print class distribution analysis
+print(f"\n📈 CLASS DISTRIBUTION ANALYSIS:")
+print(f"   • Total Samples: {len(df_classification)}")
+print(f"   • Bacterial Meningitis: {class_counts['Bacterial']} ({class_percentages['Bacterial']:.1f}%)")
+print(f"   • Viral Meningitis: {class_counts['Viral']} ({class_percentages['Viral']:.1f}%)")
+print(f"   • Class Ratio (Bacterial:Viral): {class_counts['Bacterial']/class_counts['Viral']:.2f}:1")
+print(f"   • Dataset Balance: {'Balanced' if 0.8 <= class_counts['Bacterial']/class_counts['Viral'] <= 1.2 else 'Imbalanced'}")
+
+# Print clinical insights from feature means
+print(f"\n💡 CLINICAL INSIGHTS FROM FEATURE ANALYSIS:")
+bacterial_means = df_classification[df_classification['Diagnosis'] == 'Bacterial'][feature_columns].mean()
+viral_means = df_classification[df_classification['Diagnosis'] == 'Viral'][feature_columns].mean()
+
+# Key clinical markers analysis
+key_markers = ['WBC_Count', 'Protein_Level', 'Glucose_Level', 'CRP_Level']
+print("Key diagnostic markers comparison (Bacterial vs Viral):")
+for marker in key_markers:
+    bact_mean = bacterial_means[marker]
+    viral_mean = viral_means[marker]
+    ratio = bact_mean / viral_mean if viral_mean != 0 else float('inf')
+    difference = bact_mean - viral_mean
+    print(f"   • {marker}:")
+    print(f"        Bacterial: {bact_mean:.1f}, Viral: {viral_mean:.1f}")
+    print(f"        Ratio: {ratio:.1f}x, Difference: {difference:.1f}")
+    if marker == 'WBC_Count' and ratio > 1.5:
+        print(f"        → Strong indicator: Elevated in bacterial cases")
+    elif marker == 'Glucose_Level' and ratio < 0.7:
+        print(f"        → Strong indicator: Reduced in bacterial cases")
+
+print("\n" + "=" * 80)
+print("STATISTICAL ANALYSIS COMPLETED")
 print("=" * 80)
 
 
