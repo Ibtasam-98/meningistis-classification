@@ -921,10 +921,10 @@ def main_user_interface():
         print("MENINGITIS CLASSIFICATION SYSTEM")
         print("=" * 80)
         print("\nAvailable options:")
-        print("1. 🧠 Classify new patient")
-        print("2. 📊 View model performance")
-        print("3. ℹ️  Clinical guidelines")
-        print("4. 🚪 Exit")
+        print("1. Classify new patient")
+        print("2. View model performance")
+        print("3. Clinical guidelines")
+        print("4. Exit")
 
         try:
             choice = input("\nSelect option (1-4): ").strip()
@@ -939,7 +939,7 @@ def main_user_interface():
                     accuracy_percent = result['test_accuracy'] * 100
                     print(f"{i}. {result['model_name']} (Accuracy: {accuracy_percent:.1f}%)")
 
-                print(f"{len(results) + 1}. 🏆 Use Best Overall Model ({best_accuracy_model['model_name']})")
+                print(f"{len(results) + 1}. Use Best Overall Model ({best_accuracy_model['model_name']})")
 
                 try:
                     model_choice = input(f"\nSelect model (1-{len(results) + 1}): ").strip()
@@ -948,15 +948,15 @@ def main_user_interface():
                         # Use best model
                         selected_result = best_accuracy_model
                         model_name = selected_result['model_name']
-                        print(f"🎯 Selected: {model_name} (Best Accuracy)")
+                        print(f"Selected: {model_name} (Best Accuracy)")
                     else:
                         model_choice = int(model_choice) - 1
                         if 0 <= model_choice < len(results):
                             selected_result = results[model_choice]
                             model_name = selected_result['model_name']
-                            print(f"🎯 Selected: {model_name}")
+                            print(f"Selected: {model_name}")
                         else:
-                            print("❌ Invalid model selection")
+                            print("Invalid model selection")
                             continue
 
                     # Map model names to actual model objects and their types
@@ -986,15 +986,15 @@ def main_user_interface():
                                     if diagnosis is None:
                                         break
                                 elif another == 'n':
-                                    print("\n👨‍⚕️ Thank you for using the Meningitis Classification System!")
+                                    print("\nThank you for using the Meningitis Classification System!")
                                     break
                                 else:
-                                    print("❌ Please enter 'y' or 'n'")
+                                    print("Please enter 'y' or 'n'")
                     else:
                         print("❌ Error: Model not found")
 
                 except (ValueError, IndexError):
-                    print("❌ Please enter a valid number")
+                    print("Please enter a valid number")
 
             elif choice == '2':
                 # Display model performance summary
@@ -1034,7 +1034,7 @@ def main_user_interface():
                 print("  • CSF Glucose: Normal (>45 mg/dL)")
                 print("  • CRP: 10-40 mg/L")
 
-                print("\n🚨 URGENT ACTIONS FOR SUSPECTED BACTERIAL MENINGITIS:")
+                print("\nURGENT ACTIONS FOR SUSPECTED BACTERIAL MENINGITIS:")
                 print("  1. Immediate antibiotic administration")
                 print("  2. Blood cultures before antibiotics")
                 print("  3. Lumbar puncture if no contraindications")
